@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Penomoran Kupon &amp; Doorprize</title>
+<style>
+:root{--bg:#e9e8e4;--panel:#fff;--ink:#1b1b1a;--mute:#6b6a66;--line:#d6d4cd;--acc:#1f5eff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1c1b;--panel:#2a2a28;--ink:#f0efea;--mute:#a09e97;--line:#43423e;--acc:#6f9bff}}
+:root[data-theme="dark"]{--bg:#1c1c1b;--panel:#2a2a28;--ink:#f0efea;--mute:#a09e97;--line:#43423e;--acc:#6f9bff}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{display:grid;grid-template-columns:310px 1fr;min-height:100vh}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:19px;margin:0}
+h2{font-size:14px;margin:6px 0 0;padding-top:12px;border-top:1px solid var(--line)}
+p.s{margin:0;color:var(--mute);font-size:13px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mute)}
+select,input[type=number],input[type=text]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;min-width:0;width:100%}
+input[type=color]{width:100%;height:38px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:2px}
+.chk{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.two[hidden]{display:none}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:16px;text-align:center;cursor:pointer;color:var(--mute);font-size:14px}
+.drop:hover,.drop.on{border-color:var(--acc);color:var(--acc)}
+button{font:inherit;border:0;border-radius:6px;padding:10px 14px;cursor:pointer;background:var(--acc);color:#fff;font-weight:600}
+button.g{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:400}
+button:focus-visible,select:focus-visible,input:focus-visible,.drop:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.info{font-size:13px;background:var(--bg);border-radius:6px;padding:10px}
+main{padding:24px;overflow:auto}
+#pages{zoom:.62;display:flex;flex-direction:column;align-items:center;gap:24px}
+.page{position:relative;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.18);flex:none}
+.cell{position:absolute;overflow:hidden;background:#fff}
+.cell img{position:absolute;left:50%;top:50%;object-fit:cover}
+.num{position:absolute;white-space:nowrap;line-height:1;transform-origin:0 0}
+.page svg{position:absolute;inset:0;width:100%;height:100%}
+[data-first]{cursor:crosshair}
+@media (max-width:820px){.app{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}#pages{zoom:.4}}
+@media print{
+ body{background:#fff}.app{display:block}aside{display:none}main{padding:0;overflow:visible}
+ #pages{zoom:1;display:block}
+ .page{box-shadow:none;break-after:page;page-break-after:always}
+ .page:last-child{break-after:auto;page-break-after:auto}
+ .cell.empty{display:none}
+ *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+ <div><h1>Penomoran Kupon &amp; Doorprize</h1><p class="s">Satu desain digandakan, tiap kupon dapat nomor urut sendiri.</p></div>
+ <div class="drop" id="drop" tabindex="0" role="button">Klik atau tarik desain kupon ke sini<br><span style="font-size:12px" id="dname">boleh dikosongkan kalau kertas sudah tercetak</span></div>
+ <input id="file" type="file" accept="image/*" hidden>
+ <button class="g" id="rmdesign" hidden>Hapus desain</button>
+
+ <h2>Kertas dan ukuran kupon</h2>
+ <label>Kertas
+  <select id="paper"><option value="210x297">A4 (210 × 297 mm)</option><option value="297x420">A3 (297 × 420 mm)</option><option value="329x483">A3+ (329 × 483 mm)</option><option value="215x330">F4 (215 × 330 mm)</option><option value="custom">Custom</option></select></label>
+ <div class="two" id="custom" hidden><label>Lebar (mm)<input id="pw" type="number" min="30" value="150"></label><label>Tinggi (mm)<input id="ph" type="number" min="30" value="200"></label></div>
+ <label>Ukuran kupon
+  <select id="preset"><option value="150x50">150 × 50 mm</option><option value="100x50">100 × 50 mm</option><option value="90x55">90 × 55 mm</option><option value="105x74">105 × 74 mm (A7 rebah)</option><option value="210x74">210 × 74 mm (¼ A4)</option><option value="">Isi sendiri</option></select></label>
+ <div class="two"><label>Lebar (mm)<input id="dw" type="number" min="5" step="0.5" value="150"></label><label>Tinggi (mm)<input id="dh" type="number" min="5" step="0.5" value="50"></label></div>
+ <label>Jumlah kupon<input id="qty" type="number" min="1" value="100"></label>
+
+ <h2>Format nomor</h2>
+ <div class="two"><label>Awalan<input id="npre" type="text" value=""></label><label>Akhiran<input id="nsuf" type="text" value=""></label></div>
+ <div class="two"><label>Mulai dari<input id="nstart" type="number" value="1"></label><label>Jumlah digit<input id="ndig" type="number" min="0" value="4"></label></div>
+ <label>Kenaikan tiap kupon<input id="nstep" type="number" value="1"></label>
+ <label>Urutan nomor
+  <select id="nseq"><option value="seq">Berurutan (1, 2, 3… lanjut lembar berikutnya)</option><option value="stack">Tumpukan potong (tiap posisi naik per lembar)</option></select></label>
+ <div class="two"><label>Font<select id="nfont"><option>Arial</option><option>Courier New</option><option>Times New Roman</option><option>Verdana</option><option>Tahoma</option></select></label><label>Ukuran (pt)<input id="nsize" type="number" min="4" value="14"></label></div>
+ <div class="two"><label>Warna<input id="ncol" type="color" value="#000000"></label><label>Putar nomor<select id="nrot"><option value="0">Tidak</option><option value="90">90°</option><option value="270">270°</option></select></label></div>
+ <label class="chk"><input id="nbold" type="checkbox" checked> Huruf tebal</label>
+
+ <h2>Posisi nomor</h2>
+ <p class="s">Klik pada kupon pertama di preview untuk menaruh Nomor 1. Shift + klik untuk Nomor 2.</p>
+ <div class="two"><label>Nomor 1: X (mm)<input id="nx" type="number" step="0.5" value="140"></label><label>Y (mm)<input id="ny" type="number" step="0.5" value="25"></label></div>
+ <label>Nomor 1: rata<select id="nal"><option value="l">Kiri</option><option value="c">Tengah</option><option value="r" selected>Kanan</option></select></label>
+ <label class="chk"><input id="n2on" type="checkbox" checked> Nomor 2 (sobekan)</label>
+ <div class="two"><label>Nomor 2: X (mm)<input id="nx2" type="number" step="0.5" value="20"></label><label>Y (mm)<input id="ny2" type="number" step="0.5" value="25"></label></div>
+ <label>Nomor 2: rata<select id="nal2"><option value="l">Kiri</option><option value="c" selected>Tengah</option><option value="r">Kanan</option></select></label>
+
+ <h2>Garis dan susunan</h2>
+ <label class="chk"><input id="lines" type="checkbox" checked> Cetak garis potong</label>
+ <label class="chk"><input id="stub" type="checkbox" checked> Garis sobekan (putus-putus)</label>
+ <div class="two"><label>Sobekan di X (mm)<input id="sx" type="number" step="0.5" value="40"></label><label>Tebal garis (mm)<input id="lw" type="number" min="0.01" max="0.5" step="0.01" value="0.01"></label></div>
+ <div class="two"><label>Jarak antar kupon (mm)<input id="gap" type="number" min="0" step="0.5" value="0"></label><label>Posisi di kertas<select id="align"><option value="tc">Atas tengah</option><option value="tl">Atas kiri</option><option value="c">Tengah</option></select></label></div>
+ <div class="info" id="info"></div>
+ <button id="print">Cetak / Simpan PDF</button>
+</aside>
+<main><div id="pages"></div></main>
+</div>
+<script>
+const $=id=>document.getElementById(id),M=3;
+let PW=210,PH=297,UW=204,UH=291,design=null;
+const pgStyle=document.head.appendChild(document.createElement('style'));
+const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const N=id=>parseFloat($(id).value)||0;
+
+function gridCells(w,h,g){
+  const f=(a,b)=>({a,b,c:Math.max(0,Math.floor((UW+g)/(a+g))),r:Math.max(0,Math.floor((UH+g)/(b+g)))});
+  const p=f(w,h),l=f(h,w),t=(l.c*l.r>p.c*p.r)?l:p,o=[];
+  for(let i=0;i<t.r;i++)for(let j=0;j<t.c;j++)o.push([j*(t.a+g),i*(t.b+g),t.a,t.b]);
+  return o;
+}
+function numText(n){
+  const d=Math.max(0,parseInt($('ndig').value)||0);
+  return $('npre').value+String((parseInt($('nstart').value)||0)+n*(parseInt($('nstep').value)||1)).padStart(d,'0')+$('nsuf').value;
+}
+function numSpan(txt,x,y,al,rd,dh){
+  const X=rd?dh-y:x,Y=rd?x:y,tx={l:'0',c:'-50%',r:'-100%'}[al],rot=(+$('nrot').value||0)+(rd?90:0);
+  const font=`font-family:'${$('nfont').value}',sans-serif;font-weight:${$('nbold').checked?700:400};font-size:${N('nsize')||14}pt;color:${$('ncol').value}`;
+  return `<span class="num" style="left:${X}mm;top:${Y}mm;${font};transform:rotate(${rot}deg) translate(${tx},-50%)">${txt}</span>`;
+}
+function render(){
+  const pv=$('paper').value;$('custom').hidden=pv!=='custom';
+  if(pv==='custom'){PW=Math.max(30,N('pw')||30);PH=Math.max(30,N('ph')||30)}else{[PW,PH]=pv.split('x').map(Number)}
+  UW=PW-2*M;UH=PH-2*M;
+  pgStyle.textContent=`@page{size:${PW}mm ${PH}mm;margin:0}`;
+  const dw=Math.max(5,N('dw')||150),dh=Math.max(5,N('dh')||50),g=Math.max(0,N('gap'));
+  const cells=gridCells(dw,dh,g),per=cells.length,root=$('pages');
+  root.innerHTML='';
+  if(!per){$('info').textContent='Ukuran kupon terlalu besar untuk kertas ini (margin 3 mm).';return}
+  const qty=Math.min(100000,Math.max(1,parseInt($('qty').value)||1)),S=Math.ceil(qty/per),MAXP=200,pages=Math.min(S,MAXP);
+  const stack=$('nseq').value==='stack',lw=Math.max(0.01,N('lw')||0.01),showLines=$('lines').checked,stub=$('stub').checked,sx=N('sx');
+  const mx=Math.max(...cells.map(c=>c[0]+c[2])),my=Math.max(...cells.map(c=>c[1]+c[3]));
+  const al=$('align').value,ox=al==='tl'?M:M+(UW-mx)/2,oy=al==='c'?M+(UH-my)/2:M;
+  for(let pg=0;pg<pages;pg++){
+    const page=document.createElement('div');page.className='page';page.style.width=PW+'mm';page.style.height=PH+'mm';
+    let rects='',dash='';
+    cells.forEach((c,i)=>{
+      const x=ox+c[0],y=oy+c[1],n=stack?i*S+pg:pg*per+i,d=document.createElement('div'),rd=Math.abs(c[2]-dw)>0.01;
+      d.style.cssText=`left:${x}mm;top:${y}mm;width:${c[2]}mm;height:${c[3]}mm`;
+      if(n>=qty){d.className='cell empty';page.appendChild(d);return}
+      d.className='cell';
+      let html=design?`<img src="${design}" alt="" style="width:${dw}mm;height:${dh}mm;transform:translate(-50%,-50%)${rd?' rotate(90deg)':''}">`:'';
+      const txt=esc(numText(n));
+      html+=numSpan(txt,N('nx'),N('ny'),$('nal').value,rd,dh);
+      if($('n2on').checked)html+=numSpan(txt,N('nx2'),N('ny2'),$('nal2').value,rd,dh);
+      d.innerHTML=html;
+      if(pg===0&&i===0){d.dataset.first='1';d.dataset.cw=c[2];d.dataset.ch=c[3];d.dataset.dh=dh;d.dataset.rd=rd?'1':'0'}
+      page.appendChild(d);
+      if(showLines)rects+=`<rect x="${x}" y="${y}" width="${c[2]}" height="${c[3]}"/>`;
+      if(stub)dash+=rd?`<line x1="${x}" y1="${y+sx}" x2="${x+c[2]}" y2="${y+sx}"/>`:`<line x1="${x+sx}" y1="${y}" x2="${x+sx}" y2="${y+c[3]}"/>`;
+    });
+    page.insertAdjacentHTML('beforeend',`<svg viewBox="0 0 ${PW} ${PH}" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#000" stroke-width="${lw}">${rects}</g><g fill="none" stroke="#000" stroke-width="${lw}" stroke-dasharray="1.5 1">${dash}</g></svg>`);
+    root.appendChild(page);
+  }
+  $('info').innerHTML=`<b>${per} kupon</b> per lembar<br>${qty} kupon → ${S} lembar${S>MAXP?` (preview dibatasi ${MAXP} lembar pertama)`:''}<br>Nomor ${esc(numText(0))} sampai ${esc(numText(qty-1))}<br>Kertas ${PW} × ${PH} mm, margin 3 mm`;
+}
+function setDesign(f){
+  if(!f||!f.type.startsWith('image/'))return;
+  design=URL.createObjectURL(f);$('dname').textContent=f.name;$('rmdesign').hidden=false;render();
+}
+$('drop').onclick=()=>$('file').click();
+$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
+$('file').onchange=e=>{setDesign(e.target.files[0]);e.target.value=''};
+$('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('on')};
+$('drop').ondragleave=()=>$('drop').classList.remove('on');
+$('drop').ondrop=e=>{e.preventDefault();$('drop').classList.remove('on');setDesign(e.dataTransfer.files[0])};
+$('rmdesign').onclick=()=>{design=null;$('dname').textContent='boleh dikosongkan kalau kertas sudah tercetak';$('rmdesign').hidden=true;render()};
+$('preset').onchange=e=>{if(e.target.value){const [a,b]=e.target.value.split('x');$('dw').value=a;$('dh').value=b}render()};
+$('dw').addEventListener('input',()=>{$('preset').value=''});
+$('dh').addEventListener('input',()=>{$('preset').value=''});
+document.querySelector('aside').addEventListener('input',e=>{if(e.target.id!=='preset'&&e.target.id!=='file')render()});
+$('pages').addEventListener('click',e=>{
+  const c=e.target.closest('[data-first]');if(!c)return;
+  const r=c.getBoundingClientRect(),D=c.dataset;
+  const u=(e.clientX-r.left)/r.width*D.cw,v=(e.clientY-r.top)/r.height*D.ch;
+  const x=D.rd==='1'?v:u,y=D.rd==='1'?D.dh-u:v,k=e.shiftKey?'2':'';
+  if(k)$('n2on').checked=true;
+  $('nx'+k).value=x.toFixed(1);$('ny'+k).value=y.toFixed(1);render();
+});
+$('print').onclick=()=>window.print();
+render();
+</script>
+</body>
+</html>
